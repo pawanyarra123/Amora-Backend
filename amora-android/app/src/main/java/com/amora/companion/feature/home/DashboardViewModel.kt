@@ -56,8 +56,7 @@ class DashboardViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val apiService: AmoraApiService,
     private val preferencesRepository: UserPreferencesRepository,
-    private val assistantBridge: AssistantBridge,
-    private val micDiagnostic: com.amora.companion.feature.mic.MicDiagnosticManager
+    private val assistantBridge: AssistantBridge
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -146,32 +145,15 @@ class DashboardViewModel @Inject constructor(
     fun startVoiceDiagnosticTest() {
         _uiState.value = _uiState.value.copy(
             isTestingVoice = true,
-            micRmsLevel = 0f,
-            voiceDiagnosticStatus = "🔵 Opening microphone...",
+            micRmsLevel = 0.2f,
+            voiceDiagnosticStatus = "🎙️ Listening... Speak now",
             lastRecognizedCommand = ""
         )
-
-        micDiagnostic.startTest(object : com.amora.companion.feature.mic.MicDiagnosticManager.MicTestCallback {
-            override fun onStatus(status: String) {
-                _uiState.value = _uiState.value.copy(voiceDiagnosticStatus = status)
-            }
-            override fun onRmsLevel(level: Float) {
-                _uiState.value = _uiState.value.copy(micRmsLevel = level)
-            }
-            override fun onWordRecognized(word: String) {
-                _uiState.value = _uiState.value.copy(lastRecognizedCommand = word)
-            }
-            override fun onDone(success: Boolean, finalText: String) {
-                _uiState.value = _uiState.value.copy(
-                    isTestingVoice = false,
-                    micRmsLevel = 0f
-                )
-            }
-        })
+        assistantBridge.triggerManualListening()
     }
 
     fun stopVoiceDiagnosticTest() {
-        micDiagnostic.stopTest()
+        assistantBridge.stopSpeaking()
         _uiState.value = _uiState.value.copy(
             isTestingVoice = false,
             micRmsLevel = 0f,
@@ -181,7 +163,6 @@ class DashboardViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        micDiagnostic.stopTest()
     }
 
     fun loadRealDeviceMetrics() {

@@ -73,13 +73,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Standalone Mic Diagnostic Activity (adb: am start -n com.amora.companion/.feature.mic.MicTestActivity) -->
-        <activity
-            android:name=".feature.mic.MicTestActivity"
-            android:exported="true"
-            android:label="Mic Diagnostic"
-            android:theme="@style/Theme.AmoraCompanion" />
-
         <!-- Face Security Lock Screen Activity (Triggered on USER_PRESENT) -->
         <activity
             android:name=".core.system.security.FaceAuthActivity"
