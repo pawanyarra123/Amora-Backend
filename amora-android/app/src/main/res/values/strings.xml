@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">AMORA</string>
+    <string name="accessibility_service_description">AMORA Accessibility Service allows standard device automation and quick actions when requested by the user.</string>
+</resources>

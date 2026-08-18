@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <!-- Legacy Bluetooth (API < 31) -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <!-- Modern Bluetooth (API 31+) -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.FLASHLIGHT" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="true" />
+
+    <!-- Android 11+ (API 30+) Package Visibility declarations to bind to Speech Recognition Services -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+        <package android:name="com.google.android.googlequicksearchbox" />
+        <package android:name="com.google.android.tts" />
+    </queries>
+
+    <application
+        android:name=".AmoraApplication"
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="AMORA"
+        android:roundIcon="@drawable/ic_launcher"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:theme="@style/Theme.AmoraCompanion">
+
+        <!-- Main Launcher Activity -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AmoraCompanion">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Standalone Mic Diagnostic Activity (adb: am start -n com.amora.companion/.feature.mic.MicTestActivity) -->
+        <activity
+            android:name=".feature.mic.MicTestActivity"
+            android:exported="true"
+            android:label="Mic Diagnostic"
+            android:theme="@style/Theme.AmoraCompanion" />
+
+        <!-- Face Security Lock Screen Activity (Triggered on USER_PRESENT) -->
+        <activity
+            android:name=".core.system.security.FaceAuthActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:showOnLockScreen="true"
+            android:theme="@style/Theme.AmoraCompanion.Fullscreen" />
+
+        <!-- Floating Draggable WindowManager Orb Overlay Service -->
+        <service
+            android:name=".core.system.overlay.FloatingOrbService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone|specialUse">
+            <!-- Required by Android 14+ for specialUse foreground service type -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="voice_assistant" />
+        </service>
+
+        <!-- Notification Center Listener Service -->
+        <service
+            android:name=".core.system.notifications.AmoraNotificationListener"
+            android:exported="true"
+            android:label="AMORA Notification Assistant"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- Accessibility Service for Device Control Fallback -->
+        <service
+            android:name=".core.system.accessibility.AmoraAccessibilityService"
+            android:exported="true"
+            android:label="AMORA Device Assistant"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- Best-Effort User Present Receiver for Security Auth (Boot-Aware) -->
+        <receiver
+            android:name=".core.system.security.UserPresentReceiver"
+            android:directBootAware="true"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.USER_PRESENT" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Alarm Receiver — triggered by AlarmManager -->
+        <receiver
+            android:name=".feature.alarm.AlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- Alarm Service — plays ringtone and listens for voice dismissal -->
+        <service
+            android:name=".feature.alarm.AlarmService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!-- PC Speaker Service — receives UDP audio from PC -->
+        <service
+            android:name=".feature.pcspeaker.PcSpeakerService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <!-- Real Incoming Call Screening Receiver -->
+        <receiver
+            android:name=".feature.callassistant.AmoraCallReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PHONE_STATE" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Watches for the caller's SMS reply to determine real emergency status -->
+        <receiver
+            android:name=".feature.callassistant.AmoraSmsReplyReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Real Native Call Screening Service (Android 10+) -->
+        <service
+            android:name=".feature.callassistant.AmoraCallScreeningService"
+            android:permission="android.permission.BIND_SCREENING_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.telecom.CallScreeningService" />
+            </intent-filter>
+        </service>
+
+    </application>
+
+</manifest>
