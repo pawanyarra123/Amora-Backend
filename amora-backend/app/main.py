@@ -1,8 +1,6 @@
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from pathlib import Path
 import logging
 from app.core.config import settings
 from app.api.v1 import chat, voice, messaging, notifications, documents, health, memory, weather, news
@@ -60,10 +58,10 @@ app.include_router(memory.router, prefix=settings.API_V1_STR, tags=["Memory"])
 app.include_router(weather.router, prefix=settings.API_V1_STR, tags=["Weather"])
 app.include_router(news.router, prefix=settings.API_V1_STR, tags=["News"])
 
-@app.get("/", response_class=HTMLResponse)
-@app.get("/web", response_class=HTMLResponse)
+@app.get("/")
 async def root():
-    html_file = Path(__file__).parent / "static" / "index.html"
-    if html_file.exists():
-        return FileResponse(html_file)
-    return {"message": "AMORA AI Companion Backend Service", "status": "running"}
+    return {
+        "message": "AMORA AI Companion is active",
+        "status": "online",
+        "version": "1.0.0"
+    }
