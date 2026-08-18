@@ -80,7 +80,11 @@ class AndroidSpeechRecognitionManager @Inject constructor(
 
     private val wakeWords = listOf(
         "hey amora", "amora", "hey mora", "ok amora", "okay amora",
-        "a mora", "amor", "hey amore", "amorα", "hey amor"
+        "a mora", "amor", "hey amore", "amorα", "hey amor",
+        "hamara", "hey hamara", "he hamara", "hai hamara", "hi hamara",
+        "humara", "hey humara", "amara", "hey amara", "amera", "hey amera",
+        "omora", "hey omora", "hey amura", "amura", "hey aura", "aura amora",
+        "hello amora", "hi amora", "hai amora"
     )
 
     // ── Wake-word callback ────────────────────────────────────────────────────

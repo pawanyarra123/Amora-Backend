@@ -39,7 +39,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.microphone" android:required="true" />
 
-    <!-- Android 11+ (API 30+) Package Visibility declarations to bind to Speech Recognition Services -->
+    <!-- Android 11+ (API 30+) Package Visibility declarations for Launcher, Speech Recognition, and App Control -->
     <queries>
         <intent>
             <action android:name="android.speech.RecognitionService" />
@@ -47,8 +47,20 @@
         <intent>
             <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+        </intent>
         <package android:name="com.google.android.googlequicksearchbox" />
         <package android:name="com.google.android.tts" />
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <package android:name="com.google.android.youtube" />
+        <package android:name="com.android.chrome" />
+        <package android:name="com.instagram.android" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="com.spotify.music" />
+        <package android:name="com.google.android.apps.maps" />
+        <package android:name="com.google.android.apps.photos" />
     </queries>
 
     <application

@@ -2,22 +2,32 @@ package com.amora.companion.feature.alarm
 
 import android.app.TimePickerDialog
 import android.content.Context
+import android.content.Intent
+import android.media.RingtoneManager
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -32,11 +42,37 @@ import java.util.Calendar
 @Composable
 fun AlarmScreen(
     viewModel: AlarmViewModel = hiltViewModel(),
-    themeName: String = "Midnight Blue (Default Dark)"
+    themeName: String = "Cyberpunk Neon"
 ) {
     val currentPalette = remember(themeName) { AmoraThemeSystem.getPalette(themeName) }
     val alarms by viewModel.alarms.collectAsState()
     val context = LocalContext.current
+
+    var selectedRingtoneTitle by remember { mutableStateOf("Default Alarm Tone") }
+    var selectedRingtoneUri by remember { mutableStateOf("") }
+    var showSetDialog by remember { mutableStateOf(false) }
+    var alarmHour by remember { mutableIntStateOf(7) }
+    var alarmMinute by remember { mutableIntStateOf(0) }
+    var alarmLabel by remember { mutableStateOf("Wake Up") }
+
+    val ringtonePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val uri: Uri? = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+        }
+        if (uri != null) {
+            selectedRingtoneUri = uri.toString()
+            val ringtone = RingtoneManager.getRingtone(context, uri)
+            selectedRingtoneTitle = ringtone?.getTitle(context) ?: "Custom Sound"
+        } else {
+            selectedRingtoneTitle = "Silent / Default"
+            selectedRingtoneUri = ""
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -51,27 +87,68 @@ fun AlarmScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("⏰", fontSize = 22.sp)
-                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(currentPalette.accentColor.copy(alpha = 0.2f))
+                        .border(1.5.dp, currentPalette.accentColor, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("⏰", fontSize = 20.sp)
+                }
+                Spacer(modifier = Modifier.width(10.dp))
                 Column {
-                    Text("Alarm", color = currentPalette.textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text("Say \"Amora turn off alarm\" to dismiss", color = currentPalette.subtextColor, fontSize = 11.sp)
+                    Text("Neon Cyber Alarm", color = currentPalette.textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("Voice-dismiss & custom ringtone system", color = currentPalette.subtextColor, fontSize = 11.sp)
                 }
             }
 
-            PulsingAddBtn(accentColor = currentPalette.accentColor) {
-                showTimePicker(context) { hour, minute ->
-                    viewModel.addAlarm(hour, minute)
-                }
+            Button(
+                onClick = {
+                    showTimePicker(context) { h, m ->
+                        alarmHour = h
+                        alarmMinute = m
+                        showSetDialog = true
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = currentPalette.accentColor),
+                shape = RoundedCornerShape(14.dp),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("New Alarm", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         }
 
-        // ── Voice Dismiss Info Card ─────────────────────────────────────────────
-        VioletCard(
-            title = "Voice Dismiss Only",
-            description = "This alarm can only be stopped by saying \"Amora turn off alarm\" or \"Amora stop\"",
-            icon = "🎙️"
-        )
+        // ── Voice Dismiss Glowing Info Card ─────────────────────────────────────
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.5.dp, currentPalette.accentColor.copy(alpha = 0.4f)),
+            colors = CardDefaults.cardColors(containerColor = currentPalette.surfaceColor)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(currentPalette.accentColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("🎙️", fontSize = 20.sp)
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Voice-Dismiss Lock Active", color = currentPalette.textColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text("Alarm will ring continuously until you say \"Amora stop\" or \"Amora turn off alarm\".", color = currentPalette.subtextColor, fontSize = 11.sp, lineHeight = 15.sp)
+                }
+            }
+        }
 
         // ── Alarms List / Empty State ──────────────────────────────────────────
         if (alarms.isEmpty()) {
@@ -87,17 +164,18 @@ fun AlarmScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(72.dp)
+                            .size(76.dp)
                             .clip(CircleShape)
-                            .background(currentPalette.surfaceColor.copy(alpha = 0.6f))
+                            .background(currentPalette.surfaceColor)
+                            .border(1.5.dp, currentPalette.accentColor.copy(alpha = 0.3f), CircleShape)
                             .padding(14.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text("⏰", fontSize = 36.sp)
                     }
-                    Text("No alarms set", color = currentPalette.textColor.copy(alpha = 0.8f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text("No alarms scheduled", color = currentPalette.textColor, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "Tap + to add an alarm\nOnly your voice can dismiss it",
+                        "Tap + New Alarm to configure time\nand choose your custom ringtone",
                         color = currentPalette.subtextColor,
                         fontSize = 11.sp,
                         textAlign = TextAlign.Center,
@@ -107,7 +185,7 @@ fun AlarmScreen(
             }
         } else {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.weight(1f)
             ) {
                 items(alarms, key = { it.id }) { alarm ->
@@ -121,84 +199,168 @@ fun AlarmScreen(
             }
         }
     }
+
+    // ── Save Alarm Customization Dialog ───────────────────────────────────────
+    if (showSetDialog) {
+        val timeString = formatTime(alarmHour, alarmMinute)
+        AlertDialog(
+            onDismissRequest = { showSetDialog = false },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.addAlarm(alarmHour, alarmMinute, alarmLabel)
+                        showSetDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = currentPalette.accentColor),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Save Alarm", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSetDialog = false }) {
+                    Text("Cancel", color = currentPalette.subtextColor)
+                }
+            },
+            title = { Text("Set Alarm: $timeString", color = currentPalette.textColor, fontSize = 18.sp, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = alarmLabel,
+                        onValueChange = { alarmLabel = it },
+                        label = { Text("Alarm Label", color = currentPalette.subtextColor) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = currentPalette.textColor,
+                            unfocusedTextColor = currentPalette.textColor,
+                            focusedBorderColor = currentPalette.accentColor,
+                            unfocusedBorderColor = currentPalette.accentColor.copy(alpha = 0.4f),
+                            focusedContainerColor = currentPalette.backgroundColor,
+                            unfocusedContainerColor = currentPalette.backgroundColor
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text("🎵 Alarm Ringtone:", color = currentPalette.textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                                    putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+                                    putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Select Custom Alarm Sound")
+                                    putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                                    putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+                                    if (selectedRingtoneUri.isNotEmpty()) {
+                                        putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, Uri.parse(selectedRingtoneUri))
+                                    }
+                                }
+                                ringtonePickerLauncher.launch(intent)
+                            },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = currentPalette.backgroundColor),
+                        border = BorderStroke(1.dp, currentPalette.accentColor.copy(alpha = 0.35f))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("🎵", fontSize = 16.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(selectedRingtoneTitle, color = currentPalette.textColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                            }
+                            Text("Change →", color = currentPalette.accentColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            },
+            containerColor = currentPalette.surfaceColor,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
 }
 
 @Composable
-private fun AlarmItemCard(
+fun AlarmItemCard(
     alarm: AlarmEntity,
     currentPalette: AmoraThemePalette,
     onToggle: (Boolean) -> Unit,
     onDelete: () -> Unit
 ) {
-    val amPm = if (alarm.hour < 12) "AM" else "PM"
-    val hour12 = when {
-        alarm.hour == 0 -> 12
-        alarm.hour > 12 -> alarm.hour - 12
-        else -> alarm.hour
-    }
-    val time12 = String.format("%02d:%02d %s", hour12, alarm.minute, amPm)
-
-    GlassCard(
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        cornerRadius = 18.dp,
-        backgroundColor = currentPalette.surfaceColor.copy(alpha = 0.75f)
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, if (alarm.isEnabled) currentPalette.accentColor.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.08f)),
+        colors = CardDefaults.cardColors(
+            containerColor = if (alarm.isEnabled) currentPalette.surfaceColor else currentPalette.surfaceColor.copy(alpha = 0.5f)
+        )
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("⏰", fontSize = 20.sp)
-                Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text(time12, color = currentPalette.textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(alarm.label, color = currentPalette.subtextColor, fontSize = 11.sp)
-                }
+            Column {
+                Text(
+                    text = formatTime(alarm.hour, alarm.minute),
+                    color = if (alarm.isEnabled) currentPalette.textColor else currentPalette.subtextColor,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = if (alarm.label.isNotBlank()) alarm.label else "Alarm",
+                    color = if (alarm.isEnabled) currentPalette.accentColor else currentPalette.subtextColor,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CustomToggle(checked = alarm.isEnabled, onCheckedChange = onToggle)
-                Spacer(modifier = Modifier.width(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Switch(
+                    checked = alarm.isEnabled,
+                    onCheckedChange = onToggle,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = currentPalette.accentColor,
+                        uncheckedThumbColor = Color.White.copy(alpha = 0.7f),
+                        uncheckedTrackColor = Color.White.copy(alpha = 0.12f)
+                    )
+                )
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = currentPalette.subtextColor)
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete alarm",
+                        tint = FigmaRed.copy(alpha = 0.8f)
+                    )
                 }
             }
         }
     }
 }
 
-@Composable
-private fun PulsingAddBtn(accentColor: Color, onClick: () -> Unit) {
-    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "scale"
-    )
-
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .scale(scale)
-            .clip(CircleShape)
-            .background(accentColor)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(Icons.Default.Add, contentDescription = "Add Alarm", tint = Color.White)
-    }
+private fun formatTime(hour: Int, minute: Int): String {
+    val amPm = if (hour < 12) "AM" else "PM"
+    val h12 = if (hour == 0) 12 else if (hour > 12) hour - 12 else hour
+    return String.format("%02d:%02d %s", h12, minute, amPm)
 }
 
-private fun showTimePicker(context: Context, onTimeSet: (hour: Int, minute: Int) -> Unit) {
+private fun showTimePicker(context: Context, onTimeSet: (Int, Int) -> Unit) {
     val cal = Calendar.getInstance()
     TimePickerDialog(
         context,
-        { _, hour, minute -> onTimeSet(hour, minute) },
+        { _, hourOfDay, minute -> onTimeSet(hourOfDay, minute) },
         cal.get(Calendar.HOUR_OF_DAY),
         cal.get(Calendar.MINUTE),
         false

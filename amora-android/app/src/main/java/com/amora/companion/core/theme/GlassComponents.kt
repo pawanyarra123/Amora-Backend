@@ -82,8 +82,8 @@ fun AmbientBg(modifier: Modifier = Modifier) {
 fun GlassCard(
     modifier: Modifier = Modifier,
     cornerRadius: Dp = 20.dp,
-    borderColor: Color = Color.White.copy(alpha = 0.08f),
-    backgroundColor: Color = Color.White.copy(alpha = 0.04f),
+    borderColor: Color = Color.White.copy(alpha = 0.14f),
+    backgroundColor: Color = Color(0xFF131826).copy(alpha = 0.82f),
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {

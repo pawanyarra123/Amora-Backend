@@ -219,6 +219,8 @@ fun SettingsScreen(
             }
         }
 
+        var showWipeSuccessDialog by remember { mutableStateOf(false) }
+
         // Master Wipe Confirmation Dialog
         if (showWipeConfirmDialog) {
             AlertDialog(
@@ -229,9 +231,11 @@ fun SettingsScreen(
                             viewModel.wipeAllData {
                                 wipeConfirmed = true
                                 showWipeConfirmDialog = false
+                                showWipeSuccessDialog = true
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = FigmaRed)
+                        colors = ButtonDefaults.buttonColors(containerColor = FigmaRed),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Yes, Wipe All Data", color = Color.White, fontWeight = FontWeight.Bold)
                     }
@@ -250,7 +254,33 @@ fun SettingsScreen(
                         lineHeight = 17.sp
                     )
                 },
-                containerColor = Color(0xFF1E293B)
+                containerColor = Color(0xFF1E293B),
+                shape = RoundedCornerShape(24.dp)
+            )
+        }
+
+        if (showWipeSuccessDialog) {
+            AlertDialog(
+                onDismissRequest = { showWipeSuccessDialog = false },
+                confirmButton = {
+                    Button(
+                        onClick = { showWipeSuccessDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = FigmaGreen),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("OK", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                },
+                title = { Text("✅ Master Wipe Complete", color = FigmaGreen, fontSize = 16.sp, fontWeight = FontWeight.Bold) },
+                text = {
+                    Text(
+                        "All local logs, shortcuts, and cache have been completely wiped and reset to default.",
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 12.sp
+                    )
+                },
+                containerColor = Color(0xFF1E293B),
+                shape = RoundedCornerShape(24.dp)
             )
         }
     }

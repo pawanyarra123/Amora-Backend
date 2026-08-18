@@ -43,25 +43,12 @@ fun DashboardScreen(
     val currentPalette = remember(themeName) { AmoraThemeSystem.getPalette(themeName) }
     val context = LocalContext.current
 
-    val defaultShortcuts = remember {
-        listOf(
-            AppShortcut("Chrome", "🌐", "https://google.com"),
-            AppShortcut("WhatsApp", "💬", "https://web.whatsapp.com"),
-            AppShortcut("YouTube", "▶️", "https://youtube.com"),
-            AppShortcut("ChatGPT", "🤖", "https://chatgpt.com"),
-            AppShortcut("GitHub", "🐙", "https://github.com"),
-            AppShortcut("Wikipedia", "📚", "https://wikipedia.org")
-        )
-    }
-
     val pinnedShortcuts = remember { mutableStateListOf<AppShortcut>() }
 
-    LaunchedEffect(state.persistentShortcuts) {
-        pinnedShortcuts.clear()
-        if (state.persistentShortcuts.isNotEmpty()) {
+    LaunchedEffect(state.shortcutsLoaded, state.persistentShortcuts) {
+        if (state.shortcutsLoaded) {
+            pinnedShortcuts.clear()
             pinnedShortcuts.addAll(state.persistentShortcuts)
-        } else {
-            pinnedShortcuts.addAll(defaultShortcuts)
         }
     }
 
@@ -436,7 +423,7 @@ fun DashboardScreen(
         }
     }
 
-    // Add Shortcut Dialog with matching theme input text & DataStore persistence
+    // Add Shortcut Dialog with matching theme input text & high contrast surface
     if (showAddDialog) {
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
@@ -456,7 +443,8 @@ fun DashboardScreen(
                             showAddDialog = false
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = currentPalette.accentColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = currentPalette.accentColor),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Add Shortcut", color = Color.White, fontWeight = FontWeight.Bold)
                 }
@@ -466,7 +454,7 @@ fun DashboardScreen(
                     Text("Cancel", color = currentPalette.subtextColor)
                 }
             },
-            title = { Text("Add Web Shortcut", color = currentPalette.textColor, fontSize = 17.sp, fontWeight = FontWeight.Bold) },
+            title = { Text("Add Web / App Shortcut", color = currentPalette.textColor, fontSize = 18.sp, fontWeight = FontWeight.Bold) },
             text = {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
@@ -478,12 +466,15 @@ fun DashboardScreen(
                             focusedTextColor = currentPalette.textColor,
                             unfocusedTextColor = currentPalette.textColor,
                             focusedBorderColor = currentPalette.accentColor,
-                            unfocusedBorderColor = currentPalette.subtextColor.copy(alpha = 0.4f),
-                            cursorColor = currentPalette.accentColor
+                            unfocusedBorderColor = currentPalette.accentColor.copy(alpha = 0.4f),
+                            cursorColor = currentPalette.accentColor,
+                            focusedContainerColor = currentPalette.backgroundColor,
+                            unfocusedContainerColor = currentPalette.backgroundColor
                         ),
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
                         value = newAppUrl,
                         onValueChange = { newAppUrl = it },
@@ -493,14 +484,18 @@ fun DashboardScreen(
                             focusedTextColor = currentPalette.textColor,
                             unfocusedTextColor = currentPalette.textColor,
                             focusedBorderColor = currentPalette.accentColor,
-                            unfocusedBorderColor = currentPalette.subtextColor.copy(alpha = 0.4f),
-                            cursorColor = currentPalette.accentColor
+                            unfocusedBorderColor = currentPalette.accentColor.copy(alpha = 0.4f),
+                            cursorColor = currentPalette.accentColor,
+                            focusedContainerColor = currentPalette.backgroundColor,
+                            unfocusedContainerColor = currentPalette.backgroundColor
                         ),
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
             },
-            containerColor = currentPalette.surfaceColor
+            containerColor = currentPalette.surfaceColor,
+            shape = RoundedCornerShape(24.dp)
         )
     }
 }

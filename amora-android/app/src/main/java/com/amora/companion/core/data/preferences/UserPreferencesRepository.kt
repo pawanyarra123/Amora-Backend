@@ -46,7 +46,7 @@ class UserPreferencesRepository @Inject constructor(
     }
 
     val themePreset: Flow<String> = dataStore.data.map { prefs ->
-        prefs[Keys.THEME_PRESET] ?: "Midnight Void"
+        prefs[Keys.THEME_PRESET] ?: "Cyberpunk Neon"
     }
 
     val customWallpaperUri: Flow<String> = dataStore.data.map { prefs ->

@@ -50,7 +50,7 @@ fun AmoraNavHost(
     profileViewModel: ProfileViewModel,
     permissionManager: PermissionManager
 ) {
-    val themeName by settingsViewModel.themePreset.collectAsState(initial = "Midnight Blue (Default Dark)")
+    val themeName by settingsViewModel.themePreset.collectAsState(initial = "Cyberpunk Neon")
     val navigateBackToSettings = { onNavigate(AmoraScreen.Settings.route) }
 
     when (currentRoute) {

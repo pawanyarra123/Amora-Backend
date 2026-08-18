@@ -44,6 +44,7 @@ data class DashboardUiState(
     val activeMode: String = "Meeting",
     val masterSwitchOn: Boolean = true,
     val persistentShortcuts: List<AppShortcut> = emptyList(),
+    val shortcutsLoaded: Boolean = false,
     val latestScreenedCall: String = "",
     val isTestingVoice: Boolean = false,
     val micRmsLevel: Float = 0f,
@@ -265,9 +266,11 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun saveShortcuts(shortcuts: List<AppShortcut>) {
-        viewModelScope.launch {
+        val listCopy = shortcuts.toList()
+        _uiState.value = _uiState.value.copy(persistentShortcuts = listCopy, shortcutsLoaded = true)
+        viewModelScope.launch(Dispatchers.IO) {
             val jsonArray = JSONArray()
-            for (sc in shortcuts) {
+            for (sc in listCopy) {
                 val obj = JSONObject()
                 obj.put("name", sc.name)
                 obj.put("icon", sc.icon)
@@ -291,7 +294,17 @@ class DashboardViewModel @Inject constructor(
         }
         viewModelScope.launch {
             preferencesRepository.pinnedShortcutsJson.collect { jsonStr ->
-                if (jsonStr.isNotEmpty()) {
+                if (jsonStr.isEmpty()) {
+                    val defaultList = listOf(
+                        AppShortcut("Chrome", "🌐", "https://google.com"),
+                        AppShortcut("WhatsApp", "💬", "https://web.whatsapp.com"),
+                        AppShortcut("YouTube", "▶️", "https://youtube.com"),
+                        AppShortcut("ChatGPT", "🤖", "https://chatgpt.com"),
+                        AppShortcut("GitHub", "🐙", "https://github.com"),
+                        AppShortcut("Wikipedia", "📚", "https://wikipedia.org")
+                    )
+                    saveShortcuts(defaultList)
+                } else {
                     try {
                         val array = JSONArray(jsonStr)
                         val list = mutableListOf<AppShortcut>()
@@ -305,7 +318,7 @@ class DashboardViewModel @Inject constructor(
                                 )
                             )
                         }
-                        _uiState.value = _uiState.value.copy(persistentShortcuts = list)
+                        _uiState.value = _uiState.value.copy(persistentShortcuts = list, shortcutsLoaded = true)
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
