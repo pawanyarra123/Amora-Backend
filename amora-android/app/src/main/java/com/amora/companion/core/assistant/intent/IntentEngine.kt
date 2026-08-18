@@ -111,7 +111,7 @@ class IntentEngine @Inject constructor() : IIntentEngine {
         if (Pattern.compile("\\b(toggle|switch)\\s+(the\\s+)?wi-?fi\\b").matcher(trimmed).find()) {
             return AssistantIntent.ToggleWifi(null)
         }
-        if (trimmed == "wifi" || trimmed == "wi-fi" || trimmed.contains("open wifi")) {
+        if (trimmed in listOf("wifi settings", "wi-fi settings", "open wifi", "open wi-fi", "open wifi settings", "show wifi settings", "show wifi")) {
             return AssistantIntent.OpenWifiSettings
         }
 
@@ -124,7 +124,7 @@ class IntentEngine @Inject constructor() : IIntentEngine {
         if (Pattern.compile("\\b(toggle|switch)\\s+(the\\s+)?bluetooth\\b").matcher(trimmed).find()) {
             return AssistantIntent.ToggleBluetooth(null)
         }
-        if (trimmed == "bluetooth" || trimmed.contains("open bluetooth")) {
+        if (trimmed in listOf("bluetooth settings", "open bluetooth", "open bluetooth settings", "show bluetooth settings", "show bluetooth")) {
             return AssistantIntent.OpenBluetoothSettings
         }
 

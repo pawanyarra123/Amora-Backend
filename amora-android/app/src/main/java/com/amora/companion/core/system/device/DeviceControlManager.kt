@@ -50,20 +50,10 @@ class DeviceControlManager @Inject constructor(
             val targetState = enable ?: !wifiManager.isWifiEnabled
 
             @Suppress("DEPRECATION")
-            val success = wifiManager.setWifiEnabled(targetState)
-
-            if (!success) {
-                // If direct toggle is blocked by modern Android Q+, open panel and auto-click switch via accessibility
-                openWifiPanel()
-                AmoraAccessibilityService.instance?.let { service ->
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        service.clickText("Use Wi‑Fi") || service.clickText("Wi-Fi") || service.clickText("Internet")
-                    }, 500)
-                }
-            }
+            wifiManager.setWifiEnabled(targetState)
             targetState
         } catch (e: Exception) {
-            openWifiPanel()
+            e.printStackTrace()
             enable ?: true
         }
     }
@@ -84,11 +74,10 @@ class DeviceControlManager @Inject constructor(
                 }
                 targetState
             } else {
-                openBluetoothPanel()
                 enable ?: true
             }
         } catch (e: Exception) {
-            openBluetoothPanel()
+            e.printStackTrace()
             enable ?: true
         }
     }
