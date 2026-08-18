@@ -71,6 +71,7 @@ class DeviceControlManager @Inject constructor(
     fun toggleBluetooth(enable: Boolean?): Boolean {
         return try {
             val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
+            @Suppress("DEPRECATION")
             val adapter = bluetoothManager?.adapter ?: BluetoothAdapter.getDefaultAdapter()
 
             if (adapter != null) {

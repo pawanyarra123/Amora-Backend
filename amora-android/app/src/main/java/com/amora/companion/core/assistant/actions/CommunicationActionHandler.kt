@@ -185,11 +185,6 @@ class CommunicationActionHandler @Inject constructor(
         // Capitalize standalone "i"
         text = text.replace(Regex("\\bi\\b"), "I")
 
-        // Capitalize the first character of sentences
-        val sentences = text.split(Regex("([.!?]\\s*)"))
-        val formatted = StringBuilder()
-        var lastEnd = 0
-
         val matcher = java.util.regex.Pattern.compile("([.!?]\\s*)").matcher(text)
         var segmentStart = 0
 

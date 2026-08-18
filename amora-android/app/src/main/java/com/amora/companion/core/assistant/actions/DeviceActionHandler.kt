@@ -38,21 +38,13 @@ class DeviceActionHandler @Inject constructor(
 
             is AssistantIntent.ToggleWifi -> {
                 val state = deviceControlManager.toggleWifi(intent.enabled)
-                val stateStr = when (state) {
-                    true -> "turned on"
-                    false -> "turned off"
-                    null -> "toggled"
-                }
+                val stateStr = if (state) "turned on" else "turned off"
                 ActionResult(true, "Wi-Fi $stateStr.")
             }
 
             is AssistantIntent.ToggleBluetooth -> {
                 val state = deviceControlManager.toggleBluetooth(intent.enabled)
-                val stateStr = when (state) {
-                    true -> "turned on"
-                    false -> "turned off"
-                    null -> "toggled"
-                }
+                val stateStr = if (state) "turned on" else "turned off"
                 ActionResult(true, "Bluetooth $stateStr.")
             }
 
