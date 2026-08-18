@@ -56,6 +56,13 @@ fun DashboardScreen(
     var newAppName by remember { mutableStateOf("") }
     var newAppUrl by remember { mutableStateOf("") }
 
+    var shortcutToDelete by remember { mutableStateOf<AppShortcut?>(null) }
+    var showDeleteShortcutConfirmDialog by remember { mutableStateOf(false) }
+    var showDeleteShortcutSuccessDialog by remember { mutableStateOf(false) }
+    var deletedShortcutName by remember { mutableStateOf("") }
+    var showAddShortcutSuccessDialog by remember { mutableStateOf(false) }
+    var addedShortcutName by remember { mutableStateOf("") }
+
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     val greetingText = when {
         hour < 12 -> "Good Morning"
@@ -397,24 +404,24 @@ fun DashboardScreen(
                         }
                     }
 
-                    // Delete button in top corner (persistently saved)
+                    // Delete button in top corner (with confirmation)
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .offset(x = 4.dp, y = (-4).dp)
-                            .size(18.dp)
+                            .size(20.dp)
                             .clip(CircleShape)
                             .background(FigmaRed)
                             .clickable {
-                                pinnedShortcuts.remove(shortcut)
-                                viewModel.saveShortcuts(pinnedShortcuts)
+                                shortcutToDelete = shortcut
+                                showDeleteShortcutConfirmDialog = true
                             },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "×",
                             color = Color.White,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -438,9 +445,11 @@ fun DashboardScreen(
                             val newSc = AppShortcut(newAppName, "📌", formattedUrl)
                             pinnedShortcuts.add(newSc)
                             viewModel.saveShortcuts(pinnedShortcuts)
+                            addedShortcutName = newAppName
                             newAppName = ""
                             newAppUrl = ""
                             showAddDialog = false
+                            showAddShortcutSuccessDialog = true
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = currentPalette.accentColor),
@@ -493,6 +502,103 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+            },
+            containerColor = currentPalette.surfaceColor,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    // ── Delete Shortcut Confirmation Dialog ──────────────────────────────────
+    if (showDeleteShortcutConfirmDialog && shortcutToDelete != null) {
+        val target = shortcutToDelete!!
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteShortcutConfirmDialog = false
+                shortcutToDelete = null
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        pinnedShortcuts.remove(target)
+                        viewModel.saveShortcuts(pinnedShortcuts)
+                        deletedShortcutName = target.name
+                        showDeleteShortcutConfirmDialog = false
+                        shortcutToDelete = null
+                        showDeleteShortcutSuccessDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = FigmaRed),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Yes, Delete Shortcut", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteShortcutConfirmDialog = false
+                    shortcutToDelete = null
+                }) {
+                    Text("Cancel", color = currentPalette.subtextColor)
+                }
+            },
+            title = { Text("Delete Shortcut?", color = FigmaRed, fontSize = 17.sp, fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "Are you sure you want to remove '${target.name}' from your app launcher shortcuts?",
+                    color = currentPalette.textColor,
+                    fontSize = 13.sp
+                )
+            },
+            containerColor = currentPalette.surfaceColor,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    // ── Delete Shortcut Success Dialog ───────────────────────────────────────
+    if (showDeleteShortcutSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteShortcutSuccessDialog = false },
+            confirmButton = {
+                Button(
+                    onClick = { showDeleteShortcutSuccessDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = FigmaGreen),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("OK", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            title = { Text("✅ Shortcut Deleted", color = FigmaGreen, fontSize = 17.sp, fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "'$deletedShortcutName' was deleted successfully from your shortcuts.",
+                    color = currentPalette.textColor,
+                    fontSize = 13.sp
+                )
+            },
+            containerColor = currentPalette.surfaceColor,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    // ── Add Shortcut Success Dialog ──────────────────────────────────────────
+    if (showAddShortcutSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddShortcutSuccessDialog = false },
+            confirmButton = {
+                Button(
+                    onClick = { showAddShortcutSuccessDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = FigmaGreen),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("OK", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            title = { Text("✅ Shortcut Added", color = FigmaGreen, fontSize = 17.sp, fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "'$addedShortcutName' was added successfully to your shortcuts space.",
+                    color = currentPalette.textColor,
+                    fontSize = 13.sp
+                )
             },
             containerColor = currentPalette.surfaceColor,
             shape = RoundedCornerShape(24.dp)

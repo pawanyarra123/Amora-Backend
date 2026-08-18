@@ -11,9 +11,7 @@ class IntentEngine @Inject constructor() : IIntentEngine {
         val trimmed = speechText.trim().lowercase()
         if (trimmed.isBlank()) return AssistantIntent.Unknown("")
 
-        // 1. Session-ending commands — checked first since "stop" alone means
-        // "stop talking" but "stop the assistant" / "bye" / "exit" ends the
-        // whole wake-word loop, not just the current utterance.
+        // 1. Session-ending commands
         val endSessionPhrases = listOf(
             "bye", "goodbye", "good bye", "exit", "quit", "stop assistant",
             "stop the assistant", "turn off assistant", "go to sleep",
@@ -24,12 +22,65 @@ class IntentEngine @Inject constructor() : IIntentEngine {
             return AssistantIntent.EndSession
         }
 
-        // 3. Interruption & Stop commands
+        // 2. Interruption & Stop commands
         if (trimmed in listOf("stop", "cancel", "shut up", "be quiet", "stop talking", "pause")) {
             return AssistantIntent.StopSpeaking
         }
 
-        // 3. Flashlight commands
+        // 3. WhatsApp & Messaging Actions (Checked FIRST to avoid OpenApp interference)
+        // Pattern 1: "open whatsapp and send (a)? message to <recipient> (that|saying|with) <body>"
+        val openWaAndSendMatcher = Pattern.compile(
+            "\\b(?:open\\s+whatsapp\\s+(?:and\\s+)?(?:then\\s+)?send\\s+(?:a\\s+)?(?:message\\s+)?to\\s+)(.+?)(?:\\s+(?:that|saying|with|telling)\\s+)(.+)$"
+        ).matcher(trimmed)
+        if (openWaAndSendMatcher.find()) {
+            val recipient = openWaAndSendMatcher.group(1)?.trim() ?: ""
+            val body = openWaAndSendMatcher.group(2)?.trim() ?: ""
+            if (recipient.isNotBlank() && body.isNotBlank()) {
+                return AssistantIntent.SendWhatsAppMessage(recipient = recipient, messageBody = body)
+            }
+        }
+
+        // Pattern 2: "send (a)? (whatsapp)? message to <recipient> (that|saying|with) <body>"
+        val waSendMatcher = Pattern.compile(
+            "\\b(?:send\\s+(?:a\\s+)?(?:whatsapp\\s+)?(?:message\\s+)?to\\s+)(.+?)(?:\\s+(?:that|saying|with|telling)\\s+)(.+)$"
+        ).matcher(trimmed)
+        if (waSendMatcher.find()) {
+            val recipient = waSendMatcher.group(1)?.trim() ?: ""
+            val body = waSendMatcher.group(2)?.trim() ?: ""
+            if (recipient.isNotBlank() && body.isNotBlank()) {
+                val isExplicitSms = trimmed.contains("sms") || trimmed.contains("text message")
+                return if (isExplicitSms) {
+                    AssistantIntent.SendSms(recipient = recipient, messageBody = body)
+                } else {
+                    AssistantIntent.SendWhatsAppMessage(recipient = recipient, messageBody = body)
+                }
+            }
+        }
+
+        // Pattern 3: "whatsapp <recipient> (that|saying) <body>" or "tell <recipient> (that|saying) <body>"
+        val quickWaMatcher = Pattern.compile(
+            "\\b(?:whatsapp|tell|message)\\s+([a-zA-Z0-9\\s]+?)(?:\\s+(?:that|saying)\\s+)(.+)$"
+        ).matcher(trimmed)
+        if (quickWaMatcher.find()) {
+            val recipient = quickWaMatcher.group(1)?.trim() ?: ""
+            val body = quickWaMatcher.group(2)?.trim() ?: ""
+            if (recipient.isNotBlank() && body.isNotBlank()) {
+                return AssistantIntent.SendWhatsAppMessage(recipient = recipient, messageBody = body)
+            }
+        }
+
+        // 4. Phone Calls (Checked BEFORE OpenApp to handle "make a call to mommy", "call to mom", etc.)
+        val callMatcher = Pattern.compile(
+            "\\b(?:make\\s+(?:a\\s+)?call\\s+to|call\\s+to|call|dial|phone|ring)\\s+([a-zA-Z0-9\\s]+?)(?:\\s+on\\s+phone|\\s+directly)?$"
+        ).matcher(trimmed)
+        if (callMatcher.find()) {
+            val contact = callMatcher.group(1)?.trim() ?: ""
+            if (contact.isNotBlank() && contact !in listOf("amora", "assistant", "app", "help", "settings")) {
+                return AssistantIntent.CallContact(contactName = contact)
+            }
+        }
+
+        // 5. Flashlight commands
         if (Pattern.compile("\\b(turn on|enable|open)\\s+(the\\s+)?(torch|flashlight)\\b").matcher(trimmed).find()) {
             return AssistantIntent.SetFlashlight(true)
         }
@@ -37,7 +88,7 @@ class IntentEngine @Inject constructor() : IIntentEngine {
             return AssistantIntent.SetFlashlight(false)
         }
 
-        // 4. Volume controls
+        // 6. Volume controls
         val volSetMatcher = Pattern.compile("\\bset\\s+volume\\s+(to\\s+)?(\\d+)\\s*%?\\b").matcher(trimmed)
         if (volSetMatcher.find()) {
             val pct = volSetMatcher.group(2)?.toIntOrNull() ?: 50
@@ -50,15 +101,34 @@ class IntentEngine @Inject constructor() : IIntentEngine {
             return AssistantIntent.AdjustVolume(-15)
         }
 
-        // 5. Wi-Fi & Bluetooth settings
-        if (Pattern.compile("\\b(turn on|turn off|open|toggle)\\s+(the\\s+)?wi-?fi\\b").matcher(trimmed).find()) {
+        // 7. Wi-Fi & Bluetooth direct toggling
+        if (Pattern.compile("\\b(turn on|enable|start)\\s+(the\\s+)?wi-?fi\\b").matcher(trimmed).find()) {
+            return AssistantIntent.ToggleWifi(true)
+        }
+        if (Pattern.compile("\\b(turn off|disable|stop)\\s+(the\\s+)?wi-?fi\\b").matcher(trimmed).find()) {
+            return AssistantIntent.ToggleWifi(false)
+        }
+        if (Pattern.compile("\\b(toggle|switch)\\s+(the\\s+)?wi-?fi\\b").matcher(trimmed).find()) {
+            return AssistantIntent.ToggleWifi(null)
+        }
+        if (trimmed == "wifi" || trimmed == "wi-fi" || trimmed.contains("open wifi")) {
             return AssistantIntent.OpenWifiSettings
         }
-        if (Pattern.compile("\\b(turn on|turn off|open|toggle)\\s+(the\\s+)?bluetooth\\b").matcher(trimmed).find()) {
+
+        if (Pattern.compile("\\b(turn on|enable|start)\\s+(the\\s+)?bluetooth\\b").matcher(trimmed).find()) {
+            return AssistantIntent.ToggleBluetooth(true)
+        }
+        if (Pattern.compile("\\b(turn off|disable|stop)\\s+(the\\s+)?bluetooth\\b").matcher(trimmed).find()) {
+            return AssistantIntent.ToggleBluetooth(false)
+        }
+        if (Pattern.compile("\\b(toggle|switch)\\s+(the\\s+)?bluetooth\\b").matcher(trimmed).find()) {
+            return AssistantIntent.ToggleBluetooth(null)
+        }
+        if (trimmed == "bluetooth" || trimmed.contains("open bluetooth")) {
             return AssistantIntent.OpenBluetoothSettings
         }
 
-        // 6. Open Apps
+        // 8. Open Apps
         val openAppMatcher = Pattern.compile("\\b(open|launch|start)\\s+(the\\s+)?([a-zA-Z0-9\\s]+?)(?:\\s+app)?$").matcher(trimmed)
         if (openAppMatcher.find()) {
             val rawApp = openAppMatcher.group(3)?.trim()
@@ -67,7 +137,7 @@ class IntentEngine @Inject constructor() : IIntentEngine {
             }
         }
 
-        // 7. Alarms & Timers
+        // 9. Alarms & Timers
         val alarmMatcher = Pattern.compile("\\b(set\\s+(an?\\s+)?alarm\\s+(for|at)\\s+)(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)?\\b").matcher(trimmed)
         if (alarmMatcher.find()) {
             var hour = alarmMatcher.group(4)?.toIntOrNull() ?: 7
@@ -86,7 +156,7 @@ class IntentEngine @Inject constructor() : IIntentEngine {
             return AssistantIntent.SetTimer(seconds = totalSeconds)
         }
 
-        // 8. Time & Date
+        // 10. Time & Date
         if (trimmed.contains("what time") || trimmed.contains("current time") || trimmed == "time") {
             return AssistantIntent.GetTime
         }
@@ -94,23 +164,14 @@ class IntentEngine @Inject constructor() : IIntentEngine {
             return AssistantIntent.GetDate
         }
 
-        // 9. Weather
+        // 11. Weather
         if (trimmed.contains("weather") || trimmed.contains("temperature") || trimmed.contains("forecast")) {
             val locMatcher = Pattern.compile("\\bweather\\s+in\\s+([a-zA-Z\\s]+)").matcher(trimmed)
             val loc = if (locMatcher.find()) locMatcher.group(1)?.trim() else null
             return AssistantIntent.GetWeather(loc)
         }
 
-        // 10. Phone Calls
-        val callMatcher = Pattern.compile("\\b(call|dial)\\s+([a-zA-Z0-9\\s]+)").matcher(trimmed)
-        if (callMatcher.find()) {
-            val contact = callMatcher.group(2)?.trim() ?: ""
-            if (contact.isNotBlank()) {
-                return AssistantIntent.CallContact(contactName = contact)
-            }
-        }
-
-        // 11. SMS / Messages
+        // 12. Fallback SMS Matcher
         val smsMatcher = Pattern.compile("\\b(send\\s+(a\\s+)?(message|sms)\\s+to\\s+)([a-zA-Z0-9\\s]+?)(?:\\s+saying\\s+(.+))?$").matcher(trimmed)
         if (smsMatcher.find()) {
             val recipient = smsMatcher.group(4)?.trim() ?: ""
@@ -120,15 +181,12 @@ class IntentEngine @Inject constructor() : IIntentEngine {
             }
         }
 
-        // 12. Media Controls
+        // 13. Media Controls
         if (trimmed in listOf("play music", "play", "resume music", "resume")) return AssistantIntent.MediaPlay
         if (trimmed in listOf("pause music", "pause song", "stop music")) return AssistantIntent.MediaPause
         if (trimmed in listOf("next song", "next track", "skip song")) return AssistantIntent.MediaNext
         if (trimmed in listOf("previous song", "previous track")) return AssistantIntent.MediaPrevious
 
-        // 13. No pattern matched — handled by UnknownCommandHandler with a
-        // spoken "sorry, I didn't catch that" response. No AI chat fallback:
-        // this assistant only executes recognized device commands.
         return AssistantIntent.Unknown(rawText = speechText)
     }
 }

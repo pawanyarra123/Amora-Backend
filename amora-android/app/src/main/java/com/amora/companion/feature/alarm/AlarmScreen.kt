@@ -20,14 +20,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +51,13 @@ fun AlarmScreen(
     var alarmHour by remember { mutableIntStateOf(7) }
     var alarmMinute by remember { mutableIntStateOf(0) }
     var alarmLabel by remember { mutableStateOf("Wake Up") }
+
+    // Dialog state management
+    var alarmToDelete by remember { mutableStateOf<AlarmEntity?>(null) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showDeleteSuccessDialog by remember { mutableStateOf(false) }
+    var showSaveSuccessDialog by remember { mutableStateOf(false) }
+    var savedAlarmTimeString by remember { mutableStateOf("") }
 
     val ringtonePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -193,14 +197,17 @@ fun AlarmScreen(
                         alarm = alarm,
                         currentPalette = currentPalette,
                         onToggle = { viewModel.toggleAlarm(alarm, it) },
-                        onDelete = { viewModel.deleteAlarm(alarm) }
+                        onDelete = {
+                            alarmToDelete = alarm
+                            showDeleteConfirmDialog = true
+                        }
                     )
                 }
             }
         }
     }
 
-    // ── Save Alarm Customization Dialog ───────────────────────────────────────
+    // ── 1. Save Alarm Configuration Dialog ───────────────────────────────────
     if (showSetDialog) {
         val timeString = formatTime(alarmHour, alarmMinute)
         AlertDialog(
@@ -209,7 +216,9 @@ fun AlarmScreen(
                 Button(
                     onClick = {
                         viewModel.addAlarm(alarmHour, alarmMinute, alarmLabel)
+                        savedAlarmTimeString = timeString
                         showSetDialog = false
+                        showSaveSuccessDialog = true
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = currentPalette.accentColor),
                     shape = RoundedCornerShape(12.dp)
@@ -282,6 +291,102 @@ fun AlarmScreen(
                         }
                     }
                 }
+            },
+            containerColor = currentPalette.surfaceColor,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    // ── 2. Save Success Dialog ────────────────────────────────────────────────
+    if (showSaveSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveSuccessDialog = false },
+            confirmButton = {
+                Button(
+                    onClick = { showSaveSuccessDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = FigmaGreen),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("OK", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            title = { Text("✅ Alarm Scheduled", color = FigmaGreen, fontSize = 17.sp, fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "Your alarm has been scheduled successfully for $savedAlarmTimeString.",
+                    color = currentPalette.textColor,
+                    fontSize = 13.sp
+                )
+            },
+            containerColor = currentPalette.surfaceColor,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    // ── 3. Delete Confirmation Dialog ─────────────────────────────────────────
+    if (showDeleteConfirmDialog && alarmToDelete != null) {
+        val target = alarmToDelete!!
+        val timeString = formatTime(target.hour, target.minute)
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteConfirmDialog = false
+                alarmToDelete = null
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteAlarm(target)
+                        showDeleteConfirmDialog = false
+                        alarmToDelete = null
+                        showDeleteSuccessDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = FigmaRed),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Yes, Delete Alarm", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteConfirmDialog = false
+                    alarmToDelete = null
+                }) {
+                    Text("Cancel", color = currentPalette.subtextColor)
+                }
+            },
+            title = { Text("Delete Alarm?", color = FigmaRed, fontSize = 17.sp, fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "Are you sure you want to delete the alarm scheduled for $timeString (${target.label})?",
+                    color = currentPalette.textColor,
+                    fontSize = 13.sp
+                )
+            },
+            containerColor = currentPalette.surfaceColor,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
+    // ── 4. Delete Success Dialog ──────────────────────────────────────────────
+    if (showDeleteSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteSuccessDialog = false },
+            confirmButton = {
+                Button(
+                    onClick = { showDeleteSuccessDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = FigmaGreen),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("OK", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            title = { Text("✅ Alarm Deleted", color = FigmaGreen, fontSize = 17.sp, fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "The alarm was deleted successfully.",
+                    color = currentPalette.textColor,
+                    fontSize = 13.sp
+                )
             },
             containerColor = currentPalette.surfaceColor,
             shape = RoundedCornerShape(24.dp)
